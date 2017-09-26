@@ -19,12 +19,12 @@ import java.util.stream.Collectors;
  */
 public class ConnectionHandler implements Runnable {
 
-    private final BasicMQServer bServer;
+    private final Server bServer;
     private final Socket clientSocket;
     private BufferedReader input;
     private PrintWriter output;
 
-    ConnectionHandler(BasicMQServer bMQServer, Socket clientSocket) {
+    ConnectionHandler(Server bMQServer, Socket clientSocket) {
         this.bServer = bMQServer;
         this.clientSocket = clientSocket;
     }
