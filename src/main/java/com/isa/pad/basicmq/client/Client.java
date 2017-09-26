@@ -28,7 +28,7 @@ import org.simpleframework.xml.core.Persister;
  */
 public class Client implements Runnable {
 
-    private static final String TYPE_SEND = "send";
+    public static final String TYPE_SEND = "send";
 
     private Socket socket;
     private String server;
@@ -69,6 +69,7 @@ public class Client implements Runnable {
             StringWriter sw = new StringWriter();
             p.write(cmd, sw);
             output.println(sw.toString());
+            output.println();
             output.flush();
         } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);

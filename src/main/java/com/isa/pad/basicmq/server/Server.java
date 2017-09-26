@@ -43,7 +43,7 @@ public class Server {
             while (true) {
                 Socket s = serverSocket.accept();
                 System.out.println("Connection established!");
-                this.executor.execute(new ConnectionHandler(this, s));
+                this.executor.execute(new ClientHandler(this, s));
             }
         } catch (Exception e) {
             System.out.println("System exception!");
