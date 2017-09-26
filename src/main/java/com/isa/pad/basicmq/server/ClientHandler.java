@@ -7,12 +7,16 @@ package com.isa.pad.basicmq.server;
 
 import com.isa.pad.basicmq.client.Client;
 import com.isa.pas.basicmq.utils.Command;
+import com.isa.pas.basicmq.utils.Message;
+import com.isa.pas.basicmq.utils.Response;
+import com.isa.pas.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,13 +29,13 @@ import org.simpleframework.xml.core.Persister;
  */
 public class ClientHandler implements Runnable {
 
-    private final Server bServer;
+    private final Server server;
     private final Socket clientSocket;
     private BufferedReader input;
     private PrintWriter output;
 
-    ClientHandler(Server bMQServer, Socket clientSocket) {
-        this.bServer = bMQServer;
+    ClientHandler(Server server, Socket clientSocket) {
+        this.server = server;
         this.clientSocket = clientSocket;
     }
 
@@ -50,8 +54,16 @@ public class ClientHandler implements Runnable {
                     String readCommand = readCommand();
                     Persister p = new Persister();
                     Command cmd = p.read(Command.class, new StringReader(readCommand));
-                    if(cmd.getType().equals(Client.TYPE_SEND))
+                    if (cmd.getType().equals(Client.TYPE_SEND)) {
                         System.out.println("Sending message " + cmd.getBody());
+                        server.getMessageBroker().addMessage(new Message(cmd.getBody()));
+                    } else if (cmd.getType().equals(Client.TYPE_REQUEST)) {
+                        Message message = server.getMessageBroker().getMessage();
+                        StringWriter sw = XMLSerializer.serialize(new Response(message, "OK"));
+                        output.println(sw.toString());
+                        output.println();
+                        output.flush();
+                    }
                 }
             }
         } catch (IOException e) {
@@ -74,5 +86,7 @@ public class ClientHandler implements Runnable {
         System.out.println(command);
         return command;
     }
+
+
 
 }

@@ -23,6 +23,12 @@ public class Message {
     public void setBody(String body) {
         this.body = body;
     }
+
+    @Override
+    public String toString() {
+        return String.format("%s", body);
+    }
+    
     
     
 }

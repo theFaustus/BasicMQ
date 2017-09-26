@@ -26,6 +26,7 @@ public class Server {
     private ServerSocket serverSocket;
     private ExecutorService executor = Executors.newFixedThreadPool(10);
     private Map<String, Socket> connectedUsers = new HashMap<>();
+    private MessageBroker messageBroker = new MessageBroker();
 
     public Server(int port) {
         System.out.println("BasicMQ Server 1.0");
@@ -54,4 +55,13 @@ public class Server {
         return connectedUsers;
     }
 
+    public MessageBroker getMessageBroker() {
+        return messageBroker;
+    }
+
+    public void setMessageBroker(MessageBroker messageBroker) {
+        this.messageBroker = messageBroker;
+    }
+
+     
 }

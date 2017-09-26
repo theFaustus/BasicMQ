@@ -5,13 +5,17 @@
  */
 package com.isa.pad.basicmq.client;
 
+import com.isa.pad.basicmq.server.ClientHandler;
 import com.isa.pas.basicmq.utils.Command;
 import com.isa.pas.basicmq.utils.Message;
+import com.isa.pas.basicmq.utils.Response;
+import com.isa.pas.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -29,6 +33,7 @@ import org.simpleframework.xml.core.Persister;
 public class Client implements Runnable {
 
     public static final String TYPE_SEND = "send";
+    public static final String TYPE_REQUEST = "receive";
 
     private Socket socket;
     private String server;
@@ -45,35 +50,8 @@ public class Client implements Runnable {
         this.port = port;
     }
 
-    public void startCommunication() {
-        try {
-            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
-
-            executorService.submit(this);
-
-        } catch (IOException e) {
-            System.out.println("Lost connection with server.");
-        }
-    }
-
     @Override
     public void run() {
-
-    }
-
-    public void sendMessage(Message msg) {
-        try {
-            Command cmd = new Command(TYPE_SEND, "default", msg.getBody());
-            Persister p = new Persister();
-            StringWriter sw = new StringWriter();
-            p.write(cmd, sw);
-            output.println(sw.toString());
-            output.println();
-            output.flush();
-        } catch (Exception ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-        }
 
     }
 
@@ -86,6 +64,11 @@ public class Client implements Runnable {
                 System.out.println("Server is online.");
                 System.out.println("Connection established on " + server + ":" + port);
                 this.socket = socket;
+
+                input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+                executorService.submit(this);
+
             } catch (UnknownHostException e) {
                 System.out.println("The server is unknown.");
             } catch (IOException e) {
@@ -94,12 +77,50 @@ public class Client implements Runnable {
         }
     }
 
-    private String validateOneLine() throws IOException {
-        String response = input.readLine();
-        if (response == null) {
+    public void sendMessage(Message msg) {
+        try {
+            Command cmd = new Command(TYPE_SEND, "default", msg.getBody());
+            StringWriter sw = XMLSerializer.serialize(cmd);
+            output.println(sw.toString());
+            output.println();
+            output.flush();
+            System.out.println("Message sent.");
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public Message receiveMessage() {
+        try {
+            while (true) {
+                if (input.ready()) {
+                    String readCommand = readCommand();
+                    Persister p = new Persister();
+                    Response rs = p.read(Response.class, new StringReader(readCommand));
+                    System.out.println("Received message " + rs.getOptionalMessage().getBody());
+                    return new Message(rs.getOptionalMessage().getBody());
+                }
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         }
-        return response;
+
+    }
+
+    private String readCommand() throws IOException {
+        StringBuilder sb = new StringBuilder();
+        String line = "";
+        while ((line = input.readLine()) != null) {
+            if (line.isEmpty()) {
+                break;
+            }
+            sb.append(line);
+        }
+        String command = sb.toString();
+        System.out.println(command);
+        return command;
     }
 
 }
