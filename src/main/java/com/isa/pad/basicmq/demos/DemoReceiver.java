@@ -7,9 +7,9 @@ package com.isa.pad.basicmq.demos;
 
 import com.isa.pad.basicmq.client.Client;
 import com.isa.pad.basicmq.server.ClientHandler;
-import com.isa.pas.basicmq.utils.Command;
-import com.isa.pas.basicmq.utils.Message;
-import com.isa.pas.basicmq.utils.Response;
+import com.isa.pad.basicmq.utils.Command;
+import com.isa.pad.basicmq.utils.Message;
+import com.isa.pad.basicmq.utils.Response;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;

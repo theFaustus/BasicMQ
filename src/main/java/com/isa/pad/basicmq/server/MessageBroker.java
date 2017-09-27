@@ -5,7 +5,7 @@
  */
 package com.isa.pad.basicmq.server;
 
-import com.isa.pas.basicmq.utils.Message;
+import com.isa.pad.basicmq.utils.Message;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;

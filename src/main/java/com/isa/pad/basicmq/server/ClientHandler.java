@@ -6,10 +6,10 @@
 package com.isa.pad.basicmq.server;
 
 import com.isa.pad.basicmq.client.Client;
-import com.isa.pas.basicmq.utils.Command;
-import com.isa.pas.basicmq.utils.Message;
-import com.isa.pas.basicmq.utils.Response;
-import com.isa.pas.basicmq.utils.XMLSerializer;
+import com.isa.pad.basicmq.utils.Command;
+import com.isa.pad.basicmq.utils.Message;
+import com.isa.pad.basicmq.utils.Response;
+import com.isa.pad.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;

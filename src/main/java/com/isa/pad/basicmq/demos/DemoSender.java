@@ -6,7 +6,7 @@
 package com.isa.pad.basicmq.demos;
 
 import com.isa.pad.basicmq.client.Client;
-import com.isa.pas.basicmq.utils.Message;
+import com.isa.pad.basicmq.utils.Message;
 
 /**
  *
