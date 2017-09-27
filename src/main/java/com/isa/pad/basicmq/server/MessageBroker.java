@@ -5,7 +5,9 @@
  */
 package com.isa.pad.basicmq.server;
 
+import com.isa.pad.basicmq.utils.DBConnector;
 import com.isa.pad.basicmq.utils.Message;
+import com.isa.pad.basicmq.utils.MessageBrokerDAO;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -16,12 +18,15 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class MessageBroker {
     private BlockingQueue<Message> queue = new LinkedBlockingQueue<>();
+    private MessageBrokerDAO brokerDAO = new MessageBrokerDAO(new DBConnector());
     
     public void addMessage(Message msg) throws InterruptedException{
+        brokerDAO.saveMessage(msg);
         queue.put(msg);
     }
     
     public Message getMessage() throws InterruptedException{
+       
         return queue.take();
     } 
 }

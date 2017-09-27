@@ -51,8 +51,7 @@ public class ClientHandler implements Runnable {
             while (true) {
                 if (input.ready()) {
                     String readCommand = readCommand();
-                    Persister p = new Persister();
-                    Command cmd = p.read(Command.class, new StringReader(readCommand));
+                    Command cmd = XMLSerializer.deserialize(readCommand, Command.class);
                     if (cmd.getType().equals(Client.CMD_TYPE_SEND)) {
                         System.out.println("Sending message " + cmd.getBody());
                         server.getMessageBroker().addMessage(new Message(cmd.getBody()));

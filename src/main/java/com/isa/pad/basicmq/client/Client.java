@@ -96,7 +96,7 @@ public class Client implements Runnable, AutoCloseable {
 
     }
 
-    private void sendRequest(Command cmd) {
+    private void sendCommand(Command cmd) {
         StringWriter sw;
         try {
             sw = XMLSerializer.serialize(cmd);
@@ -110,15 +110,13 @@ public class Client implements Runnable, AutoCloseable {
 
     public Message receiveMessage() {
         try {
-            while (true) {
-                sendRequest(new Command(CMD_TYPE_RECEIVE, "default", ""));
+                sendCommand(new Command(CMD_TYPE_RECEIVE, "default", ""));
                 String readCommand = readCommand();
-                Persister p = new Persister();
-                Response rs = p.read(Response.class, new StringReader(readCommand));
+                Response rs = XMLSerializer.deserialize(readCommand, Response.class);
                 Message message = new Message(rs.getOptionalMessage().getBody());
                 System.out.println("Message received " + message.getBody());
                 return message;
-            }
+           
         } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             return null;
