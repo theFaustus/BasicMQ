@@ -25,7 +25,6 @@ public class DemoReceiver {
     public static void main(String[] args) {
         Client client = new Client("localhost", 9000);
         client.openConnection();
-        client.startCommunication();
         Message msg = client.receiveMessage();
     }
      
