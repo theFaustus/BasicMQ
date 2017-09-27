@@ -12,6 +12,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -25,7 +26,6 @@ public class Server {
     private int port;
     private ServerSocket serverSocket;
     private ExecutorService executor = Executors.newFixedThreadPool(10);
-    private Map<String, Socket> connectedUsers = new HashMap<>();
     private MessageBroker messageBroker = new MessageBroker();
 
     public Server(int port) {
@@ -41,9 +41,6 @@ public class Server {
 
     public void stop() {
         try {
-            for (Map.Entry<String, Socket> entry : connectedUsers.entrySet()) {
-                entry.getValue().close();
-            }
             serverSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -55,15 +52,12 @@ public class Server {
             while (true) {
                 Socket s = serverSocket.accept();
                 System.out.println("Connection established!");
+                
                 this.executor.execute(new ClientHandler(this, s));
             }
         } catch (Exception e) {
             System.out.println("System exception!");
         }
-    }
-
-    public Map<String, Socket> getConnectedUsers() {
-        return connectedUsers;
     }
 
     public MessageBroker getMessageBroker() {

@@ -10,12 +10,28 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
+    <repositories>
+        <repository>
+            <url>
+                https://maven.atlassian.com/3rdparty/
+            </url>
+            <id>
+                Attlassian
+            </id>
+        </repository>
+    </repositories>
     <dependencies>
         <!-- https://mvnrepository.com/artifact/org.simpleframework/simple-xml -->
         <dependency>
             <groupId>org.simpleframework</groupId>
             <artifactId>simple-xml</artifactId>
             <version>2.7.1</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/postgresql/postgresql -->
+        <dependency>
+            <groupId>postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>9.4.1208-jdbc42-atlassian-hosted</version>
         </dependency>
     </dependencies>
 </project>

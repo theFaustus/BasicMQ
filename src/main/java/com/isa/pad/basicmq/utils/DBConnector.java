@@ -5,6 +5,7 @@
  */
 package com.isa.pad.basicmq.utils;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -18,34 +19,26 @@ import java.util.logging.Logger;
  */
 public class DBConnector {
 
-    private Connection conn = null;
+    private Properties p;
 
-    public DBConnector(String dbUrl, String user, String pw, boolean sslIsOn) {
-        Properties p = new Properties();
-        p.setProperty("user", user);
-        p.setProperty("password", pw);
-        if (sslIsOn) {
-            p.setProperty("ssl", "true");
-        }
+    public DBConnector() {
+        p = new Properties();
         try {
-            conn = DriverManager.getConnection(dbUrl, p);
-        } catch (SQLException ex) {
+            p.load(getClass().getResourceAsStream("/db.properties"));
+        } catch (IOException ex) {
             Logger.getLogger(DBConnector.class.getName()).log(Level.SEVERE, null, ex);
         }
+
     }
 
     public Connection getConnection() {
-        return conn;
-    }
-
-    public void close() {
+        Connection conn = null;
         try {
-            if (conn != null) {
-                conn.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+            conn = DriverManager.getConnection(p.getProperty("url"), p.getProperty("user"), p.getProperty("password"));
+        } catch (SQLException ex) {
+            Logger.getLogger(DBConnector.class.getName()).log(Level.SEVERE, null, ex);
         }
+        return conn;
     }
 
 }
