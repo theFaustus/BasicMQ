@@ -17,6 +17,13 @@ public class Queue {
     public Queue() {
     }
 
+    public Queue(Long id, String queueName) {
+        this.id = id;
+        this.queueName = queueName;
+    }
+    
+    
+
     public Queue(String queueName) {
         this.queueName = queueName;
     }
