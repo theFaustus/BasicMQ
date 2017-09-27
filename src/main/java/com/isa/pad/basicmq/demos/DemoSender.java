@@ -19,7 +19,7 @@ public class DemoSender {
         try (Client client = new Client("localhost", 9000)) {
             client.openConnection();
             client.sendMessage(new Message("Hello"));
-            client.createQueue("GOOGLE");
+            client.deleteQueue("GOOGLE");
             client.sendMessage(new Message("Hello World!"), "GOOGLE");
         } catch (IOException e) {
             e.printStackTrace();

@@ -27,9 +27,10 @@ import java.util.logging.Logger;
 public class MessageBrokerDAO {
 
     private static final String INSERT_MESSAGE_SQL = "INSERT INTO message (body, queue_id) VALUES (?, ?)";
-    private static final String DELETE_MESSAGE_SQL = "DELETE FROM message WHERE id = ?";
+    private static final String DELETE_MESSAGE_BY_ID_SQL = "DELETE FROM message WHERE id = ?";
     private static final String INSERT_QUEUE_SQL = "INSERT INTO queue (name) VALUES (?)";
-    private static final String DELETE_QUEUE_SQL = "DELETE FROM queue WHERE id = ?";
+    private static final String DELETE_QUEUE_BY_NAME_SQL = "DELETE FROM queue WHERE name = ?";
+    private static final String DELETE_MESSAGES_BY_QUEUE_ID_SQL = "DELETE FROM message WHERE queue_id = ?";
     private static final String SELECT_ALL_MESSAGES_SQL = "SELECT id, body FROM message";
     private static final String SELECT_MESSAGES_BY_QUEUE_ID_SQL = "SELECT id, body FROM message WHERE queue_id = ?";
     private static final String SELECT_QUEUE_BY_NAME_SQL = "SELECT id, name FROM queue WHERE name = ?";
@@ -60,8 +61,19 @@ public class MessageBrokerDAO {
 
     public void deleteMessage(Message msg) {
         try (Connection c = dBConnector.getConnection()) {
-            try (PreparedStatement statement = c.prepareStatement(DELETE_MESSAGE_SQL)) {
+            try (PreparedStatement statement = c.prepareStatement(DELETE_MESSAGE_BY_ID_SQL)) {
                 statement.setLong(1, msg.getId());
+                statement.executeUpdate();
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(MessageBrokerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void deleteMessagesByQueueId(String queueName) {
+        try (Connection c = dBConnector.getConnection()) {
+            try (PreparedStatement statement = c.prepareStatement(DELETE_MESSAGES_BY_QUEUE_ID_SQL)) {
+                statement.setLong(1, findQueueIdByName(new Queue(queueName)));
                 statement.executeUpdate();
             }
         } catch (SQLException ex) {
@@ -86,8 +98,8 @@ public class MessageBrokerDAO {
 
     public Queue deleteQueue(Queue queue) {
         try (Connection c = dBConnector.getConnection()) {
-            try (PreparedStatement statement = c.prepareStatement(DELETE_QUEUE_SQL)) {
-                statement.setLong(1, queue.getId());
+            try (PreparedStatement statement = c.prepareStatement(DELETE_QUEUE_BY_NAME_SQL)) {
+                statement.setString(1, queue.getQueueName());
                 statement.executeUpdate();
             }
         } catch (SQLException ex) {

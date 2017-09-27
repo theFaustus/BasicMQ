@@ -14,7 +14,7 @@ import org.simpleframework.xml.Root;
  */
 @Root
 public class Response {
-    @Element
+    @Element(required = false)
     private Message optionalMessage;
     @Element
     private String status;

@@ -41,6 +41,7 @@ public class MessageBroker {
 
     public void deleteQueueIfExists(Queue queue) {
         if (brokerDAO.isQueuePresent(queue)) {
+            brokerDAO.deleteMessagesByQueueId(queue.getQueueName());
             brokerDAO.deleteQueue(queue);
         }
         queues.remove(queue.getQueueName());
