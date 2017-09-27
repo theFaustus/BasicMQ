@@ -7,7 +7,9 @@ package com.isa.pad.basicmq.server;
 
 import com.isa.pad.basicmq.client.Client;
 import com.isa.pad.basicmq.utils.Command;
+import com.isa.pad.basicmq.utils.DBConnector;
 import com.isa.pad.basicmq.utils.Message;
+import com.isa.pad.basicmq.utils.MessageBrokerDAO;
 import com.isa.pad.basicmq.utils.Response;
 import com.isa.pad.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
@@ -33,6 +35,7 @@ public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private BufferedReader input;
     private PrintWriter output;
+    private MessageBrokerDAO brokerDAO;
 
     ClientHandler(Server server, Socket clientSocket) {
         this.server = server;
@@ -47,6 +50,7 @@ public class ClientHandler implements Runnable {
 
             input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             output = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()), true);
+            brokerDAO = new MessageBrokerDAO(new DBConnector());
 
             while (true) {
                 if (input.ready()) {
@@ -61,6 +65,8 @@ public class ClientHandler implements Runnable {
                         output.println(sw.toString());
                         output.println();
                         output.flush();
+                    } else if (cmd.getType().equals(Client.CMD_TYPE_ACKNOWLEDGE)){
+                        brokerDAO.deleteMessage(new Message(Long.valueOf(cmd.getBody())));
                     }
                 }
             }

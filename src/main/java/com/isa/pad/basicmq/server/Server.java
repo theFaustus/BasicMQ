@@ -35,7 +35,7 @@ public class Server {
             this.port = port;
             this.serverSocket = new ServerSocket(this.port);
         } catch (IOException e) {
-            System.out.println("System exception!");
+            System.out.println("System exception!\n" + e.getMessage());
         }
     }
 

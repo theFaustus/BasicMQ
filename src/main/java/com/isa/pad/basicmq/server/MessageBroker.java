@@ -10,6 +10,7 @@ import com.isa.pad.basicmq.utils.Message;
 import com.isa.pad.basicmq.utils.MessageBrokerDAO;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -19,6 +20,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class MessageBroker {
     private BlockingQueue<Message> queue = new LinkedBlockingQueue<>();
     private MessageBrokerDAO brokerDAO = new MessageBrokerDAO(new DBConnector());
+
+    public MessageBroker() {
+        queue = new LinkedBlockingDeque<>(brokerDAO.loadMessages());
+    }
     
     public void addMessage(Message msg) throws InterruptedException{
         brokerDAO.saveMessage(msg);

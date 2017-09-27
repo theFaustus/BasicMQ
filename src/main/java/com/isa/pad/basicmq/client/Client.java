@@ -33,6 +33,7 @@ public class Client implements Runnable, AutoCloseable {
 
     public static final String CMD_TYPE_SEND = "send";
     public static final String CMD_TYPE_RECEIVE = "receive";
+    public static final String CMD_TYPE_ACKNOWLEDGE = "acknowledge";
 
     private Socket socket;
     private String server;
@@ -110,18 +111,22 @@ public class Client implements Runnable, AutoCloseable {
 
     public Message receiveMessage() {
         try {
-                sendCommand(new Command(CMD_TYPE_RECEIVE, "default", ""));
-                String readCommand = readCommand();
-                Response rs = XMLSerializer.deserialize(readCommand, Response.class);
-                Message message = new Message(rs.getOptionalMessage().getBody());
-                System.out.println("Message received " + message.getBody());
-                return message;
-           
+            sendCommand(new Command(CMD_TYPE_RECEIVE, "default", ""));
+            String readCommand = readCommand();
+            Response rs = XMLSerializer.deserialize(readCommand, Response.class);
+            Message message = rs.getOptionalMessage();
+            System.out.println("Message received " + message);
+            acknowledgeMessage(message);
+            return message;
+
         } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         }
+    }
 
+    private void acknowledgeMessage(Message msg) {
+        sendCommand(new Command(CMD_TYPE_ACKNOWLEDGE, "default", String.valueOf(msg.getId())));
     }
 
     private String readCommand() throws IOException {

@@ -10,6 +10,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,6 +25,7 @@ public class MessageBrokerDAO {
     private static final String DELETE_MESSAGE_SQL = "DELETE FROM message WHERE id = ?";
     private static final String INSERT_QUEUE_SQL = "INSERT INTO queue (name) VALUES (?)";
     private static final String DELETE_QUEUE_SQL = "DELETE FROM queue WHERE id = ?";
+    private static final String SELECT_ALL_MESSAGES_SQL = "SELECT id, body FROM message";
 
     private DBConnector dBConnector;
 
@@ -81,6 +84,21 @@ public class MessageBrokerDAO {
             Logger.getLogger(MessageBrokerDAO.class.getName()).log(Level.SEVERE, null, ex);
         }
         return queue;
+    }
+
+    public List<Message> loadMessages() {
+        List<Message> messages = new ArrayList<>();
+        try (Connection c = dBConnector.getConnection()) {
+            try (PreparedStatement statement = c.prepareStatement(SELECT_ALL_MESSAGES_SQL)) {
+                ResultSet rs = statement.executeQuery();
+                while(rs.next()){
+                    messages.add(new Message(rs.getLong(1), rs.getString(2)));
+                }
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(MessageBrokerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return messages;
     }
 
 }
