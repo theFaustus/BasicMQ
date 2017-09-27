@@ -22,10 +22,13 @@ import org.simpleframework.xml.core.Persister;
  * @author Faust
  */
 public class DemoReceiver {
+
     public static void main(String[] args) {
-        Client client = new Client("localhost", 9000);
-        client.openConnection();
-        Message msg = client.receiveMessage();
+        try (Client client = new Client("localhost", 9000)) {
+            client.openConnection();
+            Message msg = client.receiveMessage();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-     
 }

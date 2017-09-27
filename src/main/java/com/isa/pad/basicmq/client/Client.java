@@ -5,7 +5,6 @@
  */
 package com.isa.pad.basicmq.client;
 
-import com.isa.pad.basicmq.server.ClientHandler;
 import com.isa.pad.basicmq.utils.Command;
 import com.isa.pad.basicmq.utils.Message;
 import com.isa.pad.basicmq.utils.Response;
@@ -30,10 +29,10 @@ import org.simpleframework.xml.core.Persister;
  *
  * @author Faust
  */
-public class Client implements Runnable {
+public class Client implements Runnable, AutoCloseable {
 
-    public static final String TYPE_SEND = "send";
-    public static final String TYPE_REQUEST = "receive";
+    public static final String CMD_TYPE_SEND = "send";
+    public static final String CMD_TYPE_RECEIVE = "receive";
 
     private Socket socket;
     private String server;
@@ -48,6 +47,12 @@ public class Client implements Runnable {
     public Client(String server, int port) {
         this.server = server;
         this.port = port;
+    }
+
+    public void close() throws IOException {
+        socket.close();
+        output.close();
+        executorService.shutdown();
     }
 
     @Override
@@ -79,7 +84,7 @@ public class Client implements Runnable {
 
     public void sendMessage(Message msg) {
         try {
-            Command cmd = new Command(TYPE_SEND, "default", msg.getBody());
+            Command cmd = new Command(CMD_TYPE_SEND, "default", msg.getBody());
             StringWriter sw = XMLSerializer.serialize(cmd);
             output.println(sw.toString());
             output.println();
@@ -91,16 +96,28 @@ public class Client implements Runnable {
 
     }
 
+    private void sendRequest(Command cmd) {
+        StringWriter sw;
+        try {
+            sw = XMLSerializer.serialize(cmd);
+            output.println(sw.toString());
+            output.println();
+            output.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public Message receiveMessage() {
         try {
             while (true) {
-                if (input.ready()) {
-                    String readCommand = readCommand();
-                    Persister p = new Persister();
-                    Response rs = p.read(Response.class, new StringReader(readCommand));
-                    System.out.println("Received message " + rs.getOptionalMessage().getBody());
-                    return new Message(rs.getOptionalMessage().getBody());
-                }
+                sendRequest(new Command(CMD_TYPE_RECEIVE, "default", ""));
+                String readCommand = readCommand();
+                Persister p = new Persister();
+                Response rs = p.read(Response.class, new StringReader(readCommand));
+                Message message = new Message(rs.getOptionalMessage().getBody());
+                System.out.println("Message received " + message.getBody());
+                return message;
             }
         } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
@@ -119,7 +136,6 @@ public class Client implements Runnable {
             sb.append(line);
         }
         String command = sb.toString();
-        System.out.println(command);
         return command;
     }
 

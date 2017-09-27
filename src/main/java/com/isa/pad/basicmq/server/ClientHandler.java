@@ -47,17 +47,16 @@ public class ClientHandler implements Runnable {
 
             input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             output = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()), true);
-            output.println("Welcome to BasicMQ Server");
 
             while (true) {
                 if (input.ready()) {
                     String readCommand = readCommand();
                     Persister p = new Persister();
                     Command cmd = p.read(Command.class, new StringReader(readCommand));
-                    if (cmd.getType().equals(Client.TYPE_SEND)) {
+                    if (cmd.getType().equals(Client.CMD_TYPE_SEND)) {
                         System.out.println("Sending message " + cmd.getBody());
                         server.getMessageBroker().addMessage(new Message(cmd.getBody()));
-                    } else if (cmd.getType().equals(Client.TYPE_REQUEST)) {
+                    } else if (cmd.getType().equals(Client.CMD_TYPE_RECEIVE)) {
                         Message message = server.getMessageBroker().getMessage();
                         StringWriter sw = XMLSerializer.serialize(new Response(message, "OK"));
                         output.println(sw.toString());
@@ -86,7 +85,5 @@ public class ClientHandler implements Runnable {
         System.out.println(command);
         return command;
     }
-
-
 
 }

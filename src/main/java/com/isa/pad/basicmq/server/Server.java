@@ -39,6 +39,17 @@ public class Server {
         }
     }
 
+    public void stop() {
+        try {
+            for (Map.Entry<String, Socket> entry : connectedUsers.entrySet()) {
+                entry.getValue().close();
+            }
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void startListening() {
         try {
             while (true) {
@@ -63,5 +74,4 @@ public class Server {
         this.messageBroker = messageBroker;
     }
 
-     
 }

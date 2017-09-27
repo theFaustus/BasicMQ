@@ -14,12 +14,12 @@ import org.simpleframework.xml.Root;
  */
 @Root
 public class Command {
-    
+
     @Element
     private String type;
     @Element
     private String queueName;
-    @Element
+    @Element(required = false)
     private String body;
 
     public Command(String type, String queueName, String body) {
@@ -30,7 +30,6 @@ public class Command {
 
     public Command() {
     }
-    
 
     public String getType() {
         return type;
@@ -55,6 +54,10 @@ public class Command {
     public void setBody(String body) {
         this.body = body;
     }
-    
-    
+
+    @Override
+    public String toString() {
+        return "Command [type=" + type + ", queueName=" + queueName + ", body=" + body + "]";
+    }
+
 }
