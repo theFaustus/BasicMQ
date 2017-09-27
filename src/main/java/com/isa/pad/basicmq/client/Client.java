@@ -12,6 +12,7 @@ import com.isa.pad.basicmq.utils.Queue;
 import com.isa.pad.basicmq.utils.Response;
 import com.isa.pad.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -21,6 +22,12 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -31,13 +38,15 @@ import org.simpleframework.xml.core.Persister;
  *
  * @author Faust
  */
-public class Client implements Runnable, AutoCloseable {
+public class Client implements Runnable, Closeable {
 
     public static final String CMD_TYPE_SEND = "send";
     public static final String CMD_TYPE_RECEIVE = "receive";
     public static final String CMD_TYPE_ACKNOWLEDGE = "acknowledge";
     public static final String CMD_TYPE_CREATE_QUEUE = "create_queue";
     public static final String CMD_TYPE_DELETE_QUEUE = "delete_queue";
+    public static final String CMD_TYPE_MESSAGE_PUBLISHED = "message_published";
+    public static final String CMD_TYPE_SUBSCRIBE = "subscribe";
 
     private Socket socket;
     private String server;
@@ -47,7 +56,10 @@ public class Client implements Runnable, AutoCloseable {
     private PrintWriter output;
     private String response = "";
     private String command = "";
-    private ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private BlockingQueue<Response> responsesToConsume = new ArrayBlockingQueue<>(10);
+    private volatile boolean closeRequested = false;
+    private Map<String, Set<MessageObserver>> messageObservers = new HashMap<>();
 
     public Client(String server, int port) {
         this.server = server;
@@ -55,6 +67,7 @@ public class Client implements Runnable, AutoCloseable {
     }
 
     public void close() throws IOException {
+        closeRequested = true;
         socket.close();
         output.close();
         executorService.shutdown();
@@ -62,7 +75,21 @@ public class Client implements Runnable, AutoCloseable {
 
     @Override
     public void run() {
-
+        while (!closeRequested) {
+            try {
+                String readCommand = readCommand();
+                Response rs = XMLSerializer.deserialize(readCommand, Response.class);
+                if (rs.getStatus().equals(CMD_TYPE_MESSAGE_PUBLISHED)) {
+                    Message msg = rs.getOptionalMessage();
+                    messageObservers.get(msg.getQueueName()).forEach(a -> a.consumeMessage(msg));
+                            
+                } else {
+                    responsesToConsume.put(rs);
+                }
+            } catch (Exception ex) {
+                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 
     public void openConnection() {
@@ -85,6 +112,13 @@ public class Client implements Runnable, AutoCloseable {
                 System.out.println("Server is offline.");
             }
         }
+    }
+
+    public void subscribe(MessageObserver o, String queueName) {
+        messageObservers.putIfAbsent(queueName, new HashSet<>());
+        messageObservers.get(queueName).add(o);
+        sendCommand(new Command(CMD_TYPE_SUBSCRIBE, queueName, ""));
+        
     }
 
     public void sendMessage(Message msg) {
@@ -138,8 +172,7 @@ public class Client implements Runnable, AutoCloseable {
     public Message receiveMessage() {
         try {
             sendCommand(new Command(CMD_TYPE_RECEIVE, MessageBroker.DEFAULT_QUEUE_NAME, ""));
-            String readCommand = readCommand();
-            Response rs = XMLSerializer.deserialize(readCommand, Response.class);
+            Response rs = responsesToConsume.take();
             Message message = rs.getOptionalMessage();
             System.out.println("Message received " + message);
             acknowledgeMessage(message);
@@ -154,8 +187,7 @@ public class Client implements Runnable, AutoCloseable {
     public Message receiveMessage(String queueName) {
         try {
             sendCommand(new Command(CMD_TYPE_RECEIVE, queueName, ""));
-            String readCommand = readCommand();
-            Response rs = XMLSerializer.deserialize(readCommand, Response.class);
+            Response rs = responsesToConsume.take();
             Message message = rs.getOptionalMessage();
             System.out.println("Message received " + message);
             acknowledgeMessage(message);

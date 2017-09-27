@@ -21,6 +21,10 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.Socket;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -38,6 +42,8 @@ public class ClientHandler implements Runnable {
     private PrintWriter output;
     private MessageBrokerDAO brokerDAO;
     private MessageBroker messageBroker;
+
+    private static Map<String, Set<PrintWriter>> queueSubscribers = new ConcurrentHashMap<>();
 
     ClientHandler(Server server, Socket clientSocket) {
         this.server = server;
@@ -62,7 +68,9 @@ public class ClientHandler implements Runnable {
                         Command cmd = XMLSerializer.deserialize(readCommand, Command.class);
                         if (cmd.getType().equals(Client.CMD_TYPE_SEND)) {
                             System.out.println("Sending message " + cmd.getBody());
-                            messageBroker.addMessage(new Message(cmd.getBody()), new Queue(cmd.getQueueName()));
+                            Message message = new Message(cmd.getBody());
+                            messageBroker.addMessage(message, new Queue(cmd.getQueueName()));
+                            publishMessage(message, cmd.getQueueName());
                         } else if (cmd.getType().equals(Client.CMD_TYPE_RECEIVE)) {
                             Message message = messageBroker.getMessage(new Queue(cmd.getQueueName()));
                             StringWriter sw = XMLSerializer.serialize(new Response(message, "OK"));
@@ -75,6 +83,11 @@ public class ClientHandler implements Runnable {
                             messageBroker.createQueueIfNotExists(new Queue(cmd.getQueueName()));
                         } else if (cmd.getType().equals(Client.CMD_TYPE_DELETE_QUEUE)) {
                             messageBroker.deleteQueueIfExists(new Queue(cmd.getQueueName()));
+                        } else if (cmd.getType().equals(Client.CMD_TYPE_SUBSCRIBE)) {
+                            String queueName = cmd.getQueueName();
+                            queueSubscribers.putIfAbsent(queueName, new CopyOnWriteArraySet<>());
+                            Set<PrintWriter> outputOfSubscriber = queueSubscribers.get(queueName);
+                            outputOfSubscriber.add(output);
                         }
                     }
                 } catch (RuntimeException e) {
@@ -103,6 +116,21 @@ public class ClientHandler implements Runnable {
         String command = sb.toString();
         System.out.println(command);
         return command;
+    }
+
+    private void publishMessage(Message message, String queueName) throws Exception {
+        for (Map.Entry<String, Set<PrintWriter>> entry : queueSubscribers.entrySet()) {
+            String queue = entry.getKey();
+            Set<PrintWriter> subs = entry.getValue();
+            if (queue.equals(queueName)) {
+                for (PrintWriter sub : subs) {
+                    StringWriter sw = XMLSerializer.serialize(new Response(message, Client.CMD_TYPE_MESSAGE_PUBLISHED));
+                    sub.println(sw.toString());
+                    sub.println();
+                    sub.flush();
+                }
+            }
+        }
     }
 
 }

@@ -16,13 +16,10 @@ import java.io.IOException;
 public class DemoSender {
 
     public static void main(String[] args) {
-        try (Client client = new Client("localhost", 9000)) {
-            client.openConnection();
-            client.sendMessage(new Message("Hello"));
-            client.deleteQueue("GOOGLE");
-            client.sendMessage(new Message("Hello World!"), "GOOGLE");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Client client = new Client("localhost", 9000);
+        client.openConnection();
+        client.sendMessage(new Message("Hello"));
+        client.createQueue("GOOGLE");
+        client.sendMessage(new Message("Hello World!"), "GOOGLE");
     }
 }

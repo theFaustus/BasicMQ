@@ -19,7 +19,7 @@ public class Response {
     @Element
     private String status;
     @Element(required = false)
-    private String description;
+    private String errorDescription;
 
     public Response() {
     }
@@ -27,7 +27,7 @@ public class Response {
     public Response(Message optionalMessage, String status, String description) {
         this.optionalMessage = optionalMessage;
         this.status = status;
-        this.description = description;
+        this.errorDescription = description;
     }
 
     public Response(Message optionalMessage, String status) {

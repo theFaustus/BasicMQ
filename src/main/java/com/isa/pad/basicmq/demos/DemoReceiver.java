@@ -6,6 +6,7 @@
 package com.isa.pad.basicmq.demos;
 
 import com.isa.pad.basicmq.client.Client;
+import com.isa.pad.basicmq.client.MessageObserver;
 import com.isa.pad.basicmq.server.ClientHandler;
 import com.isa.pad.basicmq.utils.Command;
 import com.isa.pad.basicmq.utils.Message;
@@ -24,12 +25,10 @@ import org.simpleframework.xml.core.Persister;
 public class DemoReceiver {
 
     public static void main(String[] args) {
-        try (Client client = new Client("localhost", 9000)) {
-            client.openConnection();
-            Message msg = client.receiveMessage();
-            msg = client.receiveMessage("GOOGLE");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Client client = new Client("localhost", 9000);
+        client.openConnection();
+        client.subscribe(System.out::println, "GOOGLE");
+        //Message msg = client.receiveMessage();
+        //msg = client.receiveMessage("GOOGLE");
     }
 }
