@@ -27,6 +27,7 @@ public class DemoReceiver {
         try (Client client = new Client("localhost", 9000)) {
             client.openConnection();
             Message msg = client.receiveMessage();
+            msg = client.receiveMessage("GOOGLE");
         } catch (IOException e) {
             e.printStackTrace();
         }

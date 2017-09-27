@@ -10,6 +10,7 @@ import com.isa.pad.basicmq.utils.Command;
 import com.isa.pad.basicmq.utils.DBConnector;
 import com.isa.pad.basicmq.utils.Message;
 import com.isa.pad.basicmq.utils.MessageBrokerDAO;
+import com.isa.pad.basicmq.utils.Queue;
 import com.isa.pad.basicmq.utils.Response;
 import com.isa.pad.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
@@ -36,10 +37,12 @@ public class ClientHandler implements Runnable {
     private BufferedReader input;
     private PrintWriter output;
     private MessageBrokerDAO brokerDAO;
+    private MessageBroker messageBroker;
 
     ClientHandler(Server server, Socket clientSocket) {
         this.server = server;
         this.clientSocket = clientSocket;
+        this.messageBroker = server.getMessageBroker();
     }
 
     @Override
@@ -53,21 +56,32 @@ public class ClientHandler implements Runnable {
             brokerDAO = new MessageBrokerDAO(new DBConnector());
 
             while (true) {
-                if (input.ready()) {
-                    String readCommand = readCommand();
-                    Command cmd = XMLSerializer.deserialize(readCommand, Command.class);
-                    if (cmd.getType().equals(Client.CMD_TYPE_SEND)) {
-                        System.out.println("Sending message " + cmd.getBody());
-                        server.getMessageBroker().addMessage(new Message(cmd.getBody()));
-                    } else if (cmd.getType().equals(Client.CMD_TYPE_RECEIVE)) {
-                        Message message = server.getMessageBroker().getMessage();
-                        StringWriter sw = XMLSerializer.serialize(new Response(message, "OK"));
-                        output.println(sw.toString());
-                        output.println();
-                        output.flush();
-                    } else if (cmd.getType().equals(Client.CMD_TYPE_ACKNOWLEDGE)){
-                        brokerDAO.deleteMessage(new Message(Long.valueOf(cmd.getBody())));
+                try {
+                    if (input.ready()) {
+                        String readCommand = readCommand();
+                        Command cmd = XMLSerializer.deserialize(readCommand, Command.class);
+                        if (cmd.getType().equals(Client.CMD_TYPE_SEND)) {
+                            System.out.println("Sending message " + cmd.getBody());
+                            messageBroker.addMessage(new Message(cmd.getBody()), new Queue(cmd.getQueueName()));
+                        } else if (cmd.getType().equals(Client.CMD_TYPE_RECEIVE)) {
+                            Message message = messageBroker.getMessage(new Queue(cmd.getQueueName()));
+                            StringWriter sw = XMLSerializer.serialize(new Response(message, "OK"));
+                            output.println(sw.toString());
+                            output.println();
+                            output.flush();
+                        } else if (cmd.getType().equals(Client.CMD_TYPE_ACKNOWLEDGE)) {
+                            messageBroker.deleteMessage(new Message(Long.valueOf(cmd.getBody())));
+                        } else if (cmd.getType().equals(Client.CMD_TYPE_CREATE_QUEUE)) {
+                            messageBroker.createQueueIfNotExists(new Queue(cmd.getQueueName()));
+                        } else if (cmd.getType().equals(Client.CMD_TYPE_DELETE_QUEUE)) {
+                            messageBroker.deleteQueueIfExists(new Queue(cmd.getQueueName()));
+                        }
                     }
+                } catch (RuntimeException e) {
+                    StringWriter sw = XMLSerializer.serialize(new Response(null, "ERROR", e.getMessage()));
+                    output.println(sw.toString());
+                    output.println();
+                    output.flush();
                 }
             }
         } catch (IOException e) {

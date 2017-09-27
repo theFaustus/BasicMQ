@@ -12,6 +12,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,12 +26,15 @@ import java.util.logging.Logger;
  */
 public class MessageBrokerDAO {
 
-    private static final String INSERT_MESSAGE_SQL = "INSERT INTO message (body) VALUES (?)";
+    private static final String INSERT_MESSAGE_SQL = "INSERT INTO message (body, queue_id) VALUES (?, ?)";
     private static final String DELETE_MESSAGE_SQL = "DELETE FROM message WHERE id = ?";
     private static final String INSERT_QUEUE_SQL = "INSERT INTO queue (name) VALUES (?)";
     private static final String DELETE_QUEUE_SQL = "DELETE FROM queue WHERE id = ?";
     private static final String SELECT_ALL_MESSAGES_SQL = "SELECT id, body FROM message";
-    private static final String SELECT_QUEUE_BY_NAME = "SELECT id, name FROM queue WHERE name = ?";
+    private static final String SELECT_MESSAGES_BY_QUEUE_ID_SQL = "SELECT id, body FROM message WHERE queue_id = ?";
+    private static final String SELECT_QUEUE_BY_NAME_SQL = "SELECT id, name FROM queue WHERE name = ?";
+    private static final String SELECT_ALL_QUEUES_SQL = "SELECT id, name FROM queue";
+    private static final String SELECT_QUEUE_ID_BY_NAME_SQL = "SELECT id FROM queue WHERE name = ?";
 
     private DBConnector dBConnector;
 
@@ -38,6 +46,7 @@ public class MessageBrokerDAO {
         try (Connection c = dBConnector.getConnection()) {
             try (PreparedStatement statement = c.prepareStatement(INSERT_MESSAGE_SQL, Statement.RETURN_GENERATED_KEYS)) {
                 statement.setString(1, msg.getBody());
+                statement.setLong(2, findQueueIdByName(new Queue(msg.getQueueName())));
                 statement.executeUpdate();
                 ResultSet rs = statement.getGeneratedKeys();
                 rs.next();
@@ -87,10 +96,27 @@ public class MessageBrokerDAO {
         return queue;
     }
 
-    public List<Message> loadMessages() {
-        List<Message> messages = new ArrayList<>();
+    public Map<String, BlockingQueue> loadQueues() {
+        Map<String, BlockingQueue> queues = new ConcurrentHashMap<>();
         try (Connection c = dBConnector.getConnection()) {
-            try (PreparedStatement statement = c.prepareStatement(SELECT_ALL_MESSAGES_SQL)) {
+            try (PreparedStatement statement = c.prepareStatement(SELECT_ALL_QUEUES_SQL)) {
+                ResultSet rs = statement.executeQuery();
+                while (rs.next()) {
+                    queues.put(rs.getString(2), loadMessagesByQueueId(rs.getLong(1)));
+                }
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(MessageBrokerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return queues;
+    }
+
+    public BlockingQueue<Message> loadMessagesByQueueId(Long id) {
+        BlockingQueue messages = new LinkedBlockingDeque();
+        try (Connection c = dBConnector.getConnection()) {
+            try (PreparedStatement statement = c.prepareStatement(SELECT_MESSAGES_BY_QUEUE_ID_SQL)) {
+                statement.setLong(1, id);
                 ResultSet rs = statement.executeQuery();
                 while (rs.next()) {
                     messages.add(new Message(rs.getLong(1), rs.getString(2)));
@@ -104,7 +130,7 @@ public class MessageBrokerDAO {
 
     public boolean isQueuePresent(Queue q) {
         try (Connection c = dBConnector.getConnection()) {
-            try (PreparedStatement statement = c.prepareStatement(SELECT_QUEUE_BY_NAME)) {
+            try (PreparedStatement statement = c.prepareStatement(SELECT_QUEUE_BY_NAME_SQL)) {
                 statement.setString(1, q.getQueueName());
                 ResultSet rs = statement.executeQuery();
                 return rs.next();
@@ -113,6 +139,23 @@ public class MessageBrokerDAO {
             Logger.getLogger(MessageBrokerDAO.class.getName()).log(Level.SEVERE, null, ex);
         }
         return false;
+    }
+
+    public Long findQueueIdByName(Queue q) {
+        try (Connection c = dBConnector.getConnection()) {
+            try (PreparedStatement statement = c.prepareStatement(SELECT_QUEUE_ID_BY_NAME_SQL)) {
+                statement.setString(1, q.getQueueName());
+                ResultSet rs = statement.executeQuery();
+                if (rs.next()) {
+                    return rs.getLong(1);
+                } else {
+                    throw new RuntimeException("Queue " + q.getQueueName() + " doesn`t exist.");
+                }
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(MessageBrokerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
     }
 
 }

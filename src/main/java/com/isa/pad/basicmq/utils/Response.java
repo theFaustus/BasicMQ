@@ -18,8 +18,16 @@ public class Response {
     private Message optionalMessage;
     @Element
     private String status;
+    @Element(required = false)
+    private String description;
 
     public Response() {
+    }
+
+    public Response(Message optionalMessage, String status, String description) {
+        this.optionalMessage = optionalMessage;
+        this.status = status;
+        this.description = description;
     }
 
     public Response(Message optionalMessage, String status) {

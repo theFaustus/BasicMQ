@@ -22,23 +22,32 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class MessageBroker {
 
-    private static final String DEFAULT_QUEUE_NAME = "default";
+    public static final String DEFAULT_QUEUE_NAME = "default";
 
     private Map<String, BlockingQueue> queues = new ConcurrentHashMap<>();
     private MessageBrokerDAO brokerDAO = new MessageBrokerDAO(new DBConnector());
 
     public MessageBroker() {
+        brokerDAO.loadQueues();
         createQueueIfNotExists(new Queue(DEFAULT_QUEUE_NAME));
     }
 
     public void createQueueIfNotExists(Queue queue) {
         if (!brokerDAO.isQueuePresent(queue)) {
-            queues.put(queue.getQueueName(), new LinkedBlockingQueue());
             brokerDAO.saveQueue(queue);
         }
+        queues.put(queue.getQueueName(), new LinkedBlockingQueue());
+    }
+
+    public void deleteQueueIfExists(Queue queue) {
+        if (brokerDAO.isQueuePresent(queue)) {
+            brokerDAO.deleteQueue(queue);
+        }
+        queues.remove(queue.getQueueName());
     }
 
     public void addMessage(Message msg, Queue q) throws InterruptedException {
+        msg.setQueueName(q.getQueueName());
         brokerDAO.saveMessage(msg);
         BlockingQueue<Message> queue = queues.get(q.getQueueName());
         if (queue != null) {
@@ -49,9 +58,15 @@ public class MessageBroker {
     }
 
     public void addMessage(Message msg) throws InterruptedException {
+        msg.setQueueName(DEFAULT_QUEUE_NAME);
         brokerDAO.saveMessage(msg);
         BlockingQueue<Message> queue = queues.get(DEFAULT_QUEUE_NAME);
         queue.put(msg);
+    }
+    
+
+    public void deleteMessage(Message msg) throws InterruptedException {
+        brokerDAO.deleteMessage(msg);
     }
 
     public Message getMessage(Queue q) throws InterruptedException {

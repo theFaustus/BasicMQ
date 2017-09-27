@@ -5,8 +5,10 @@
  */
 package com.isa.pad.basicmq.client;
 
+import com.isa.pad.basicmq.server.MessageBroker;
 import com.isa.pad.basicmq.utils.Command;
 import com.isa.pad.basicmq.utils.Message;
+import com.isa.pad.basicmq.utils.Queue;
 import com.isa.pad.basicmq.utils.Response;
 import com.isa.pad.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
@@ -34,6 +36,8 @@ public class Client implements Runnable, AutoCloseable {
     public static final String CMD_TYPE_SEND = "send";
     public static final String CMD_TYPE_RECEIVE = "receive";
     public static final String CMD_TYPE_ACKNOWLEDGE = "acknowledge";
+    public static final String CMD_TYPE_CREATE_QUEUE = "create_queue";
+    public static final String CMD_TYPE_DELETE_QUEUE = "delete_queue";
 
     private Socket socket;
     private String server;
@@ -85,16 +89,38 @@ public class Client implements Runnable, AutoCloseable {
 
     public void sendMessage(Message msg) {
         try {
-            Command cmd = new Command(CMD_TYPE_SEND, "default", msg.getBody());
-            StringWriter sw = XMLSerializer.serialize(cmd);
-            output.println(sw.toString());
-            output.println();
-            output.flush();
-            System.out.println("Message sent.");
+            Command cmd = new Command(CMD_TYPE_SEND, MessageBroker.DEFAULT_QUEUE_NAME, msg.getBody());
+            sendCommand(cmd);
         } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
 
+    public void sendMessage(Message msg, String queueName) {
+        try {
+            Command cmd = new Command(CMD_TYPE_SEND, queueName, msg.getBody());
+            sendCommand(cmd);
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void createQueue(String queueName) {
+        try {
+            Command cmd = new Command(CMD_TYPE_CREATE_QUEUE, queueName, null);
+            sendCommand(cmd);
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void deleteQueue(String queueName) {
+        try {
+            Command cmd = new Command(CMD_TYPE_DELETE_QUEUE, queueName, null);
+            sendCommand(cmd);
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     private void sendCommand(Command cmd) {
@@ -111,7 +137,23 @@ public class Client implements Runnable, AutoCloseable {
 
     public Message receiveMessage() {
         try {
-            sendCommand(new Command(CMD_TYPE_RECEIVE, "default", ""));
+            sendCommand(new Command(CMD_TYPE_RECEIVE, MessageBroker.DEFAULT_QUEUE_NAME, ""));
+            String readCommand = readCommand();
+            Response rs = XMLSerializer.deserialize(readCommand, Response.class);
+            Message message = rs.getOptionalMessage();
+            System.out.println("Message received " + message);
+            acknowledgeMessage(message);
+            return message;
+
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        }
+    }
+
+    public Message receiveMessage(String queueName) {
+        try {
+            sendCommand(new Command(CMD_TYPE_RECEIVE, queueName, ""));
             String readCommand = readCommand();
             Response rs = XMLSerializer.deserialize(readCommand, Response.class);
             Message message = rs.getOptionalMessage();

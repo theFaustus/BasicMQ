@@ -20,6 +20,8 @@ public class Message {
     private Long id;
     @Element
     private String body;
+    @Element(required = false)
+    private String queueName;
 
     public Message() {
     }
@@ -32,8 +34,6 @@ public class Message {
         this.id = id;
         this.body = body;
     }
-    
-    
 
     public Long getId() {
         return id;
@@ -55,9 +55,19 @@ public class Message {
         this.body = body;
     }
 
+    public String getQueueName() {
+        return queueName;
+    }
+
+    public void setQueueName(String queueName) {
+        this.queueName = queueName;
+    }
+
     @Override
     public String toString() {
-        return "Message{" + "id=" + id + ", body=" + body + '}';
-    }    
+        return "Message{" + "id=" + id + ", body=" + body + ", queueName=" + queueName + '}';
+    }
+
+    
 
 }
