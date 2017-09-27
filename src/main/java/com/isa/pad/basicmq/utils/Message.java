@@ -10,9 +10,18 @@ package com.isa.pad.basicmq.utils;
  * @author Faust
  */
 public class Message {
+    private Long id;
     private String body;
 
     public Message() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
     
     public Message(String body) {
