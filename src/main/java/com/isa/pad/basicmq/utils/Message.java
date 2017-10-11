@@ -5,6 +5,7 @@
  */
 package com.isa.pad.basicmq.utils;
 
+import java.util.Objects;
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
@@ -33,6 +34,12 @@ public class Message {
     public Message(Long id, String body) {
         this.id = id;
         this.body = body;
+    }
+
+    public Message(Long id, String body, String queueName) {
+        this.id = id;
+        this.body = body;
+        this.queueName = queueName;
     }
 
     public Long getId() {
@@ -66,6 +73,31 @@ public class Message {
     @Override
     public String toString() {
         return "Message{" + "id=" + id + ", body=" + body + ", queueName=" + queueName + '}';
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 89 * hash + Objects.hashCode(this.id);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Message other = (Message) obj;
+        if (!Objects.equals(this.id, other.id)) {
+            return false;
+        }
+        return true;
     }
 
     

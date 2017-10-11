@@ -8,7 +8,8 @@ package com.isa.pad.basicmq.server;
 import com.isa.pad.basicmq.utils.DBConnector;
 import com.isa.pad.basicmq.utils.Message;
 import com.isa.pad.basicmq.utils.MessageBrokerDAO;
-import com.isa.pad.basicmq.utils.Queue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -28,33 +29,38 @@ public class MessageBroker {
     private MessageBrokerDAO brokerDAO = new MessageBrokerDAO(new DBConnector());
 
     public MessageBroker() {
-        brokerDAO.loadQueues();
-        createQueueIfNotExists(new Queue(DEFAULT_QUEUE_NAME));
+        queues = brokerDAO.loadQueues();
+        createQueueIfNotExists(DEFAULT_QUEUE_NAME);
     }
 
-    public void createQueueIfNotExists(Queue queue) {
-        if (!brokerDAO.isQueuePresent(queue)) {
-            brokerDAO.saveQueue(queue);
+    public List<String> getAllQueues() {
+        return new ArrayList<>(queues.keySet());
+    }
+
+    public void createQueueIfNotExists(String queueName) {
+        if (!brokerDAO.isQueuePresent(queueName)) {
+            brokerDAO.saveQueue(queueName);
+            queues.put(queueName, new LinkedBlockingQueue());
         }
-        queues.put(queue.getQueueName(), new LinkedBlockingQueue());
+
     }
 
-    public void deleteQueueIfExists(Queue queue) {
-        if (brokerDAO.isQueuePresent(queue)) {
-            brokerDAO.deleteMessagesByQueueId(queue.getQueueName());
-            brokerDAO.deleteQueue(queue);
+    public void deleteQueueIfExists(String queueName) {
+        if (brokerDAO.isQueuePresent(queueName)) {
+            brokerDAO.deleteMessagesByQueueId(queueName);
+            brokerDAO.deleteQueue(queueName);
         }
-        queues.remove(queue.getQueueName());
+        queues.remove(queueName);
     }
 
-    public void addMessage(Message msg, Queue q) throws InterruptedException {
-        msg.setQueueName(q.getQueueName());
+    public void addMessage(Message msg, String queueName) throws InterruptedException {
+        msg.setQueueName(queueName);
         brokerDAO.saveMessage(msg);
-        BlockingQueue<Message> queue = queues.get(q.getQueueName());
+        BlockingQueue<Message> queue = queues.get(queueName);
         if (queue != null) {
             queue.put(msg);
         } else {
-            throw new RuntimeException("Queue [" + q.getQueueName() + "] doesn`t exist.");
+            throw new RuntimeException("Queue [" + queueName + "] doesn`t exist.");
         }
     }
 
@@ -64,18 +70,40 @@ public class MessageBroker {
         BlockingQueue<Message> queue = queues.get(DEFAULT_QUEUE_NAME);
         queue.put(msg);
     }
-    
 
-    public void deleteMessage(Message msg) throws InterruptedException {
+    public void purgeMessage(Message msg) throws InterruptedException {
         brokerDAO.deleteMessage(msg);
+        BlockingQueue<Message> queue = queues.get(DEFAULT_QUEUE_NAME);
+        queue.remove(msg);
     }
 
-    public Message getMessage(Queue q) throws InterruptedException {
-        BlockingQueue<Message> queue = queues.get(q.getQueueName());
+    public void deleteMessage(Message msg) throws InterruptedException {
+        BlockingQueue<Message> queue = queues.get(DEFAULT_QUEUE_NAME);
+        queue.remove(msg);
+    }
+
+    public void purgeMessage(Message msg, String queueName) throws InterruptedException {
+        brokerDAO.deleteMessage(msg);
+        BlockingQueue<Message> queue = queues.get(queueName);
+        queue.remove(msg);
+    }
+
+    public void deleteMessage(Message msg, String queueName) throws InterruptedException {
+        BlockingQueue<Message> queue = queues.get(queueName);
+        queue.remove(msg);
+    }
+
+    public boolean hasMessages(String queueName) throws InterruptedException {
+        BlockingQueue<Message> queue = queues.get(queueName);
+        return !queue.isEmpty();
+    }
+
+    public Message getMessage(String queueName) throws InterruptedException {
+        BlockingQueue<Message> queue = queues.get(queueName);
         if (queue != null) {
             return queue.take();
         } else {
-            throw new RuntimeException("Queue [" + q.getQueueName() + "] doesn`t exist.");
+            throw new RuntimeException("Queue [" + queueName + "] doesn`t exist.");
         }
     }
 

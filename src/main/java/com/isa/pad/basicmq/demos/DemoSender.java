@@ -18,8 +18,16 @@ public class DemoSender {
     public static void main(String[] args) {
         Client client = new Client("localhost", 9000);
         client.openConnection();
-        client.sendMessage(new Message("Hello"));
+        Message message = new Message("Hello!");
+        client.sendMessage(message);
+        System.out.println("Sent " + message);
         client.createQueue("GOOGLE");
-        client.sendMessage(new Message("Hello World!"), "GOOGLE");
+        message = new Message("Hello World!");
+        client.sendMessage(message, "GOOGLE");
+        System.out.println("Sent " + message);
+        client.createQueue("GOOGLPLEX");
+        message = new Message("Hello Galaxy!");
+        client.sendRegexMessage(message, "G.+");
+        System.out.println("Sent " + message);
     }
 }

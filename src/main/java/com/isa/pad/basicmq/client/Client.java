@@ -5,10 +5,10 @@
  */
 package com.isa.pad.basicmq.client;
 
+import com.isa.pad.basicmq.server.ClientHandler;
 import com.isa.pad.basicmq.server.MessageBroker;
 import com.isa.pad.basicmq.utils.Command;
 import com.isa.pad.basicmq.utils.Message;
-import com.isa.pad.basicmq.utils.Queue;
 import com.isa.pad.basicmq.utils.Response;
 import com.isa.pad.basicmq.utils.XMLSerializer;
 import java.io.BufferedReader;
@@ -41,11 +41,11 @@ import org.simpleframework.xml.core.Persister;
 public class Client implements Runnable, Closeable {
 
     public static final String CMD_TYPE_SEND = "send";
+    public static final String CMD_TYPE_SEND_REGEX = "send_regex";
     public static final String CMD_TYPE_RECEIVE = "receive";
     public static final String CMD_TYPE_ACKNOWLEDGE = "acknowledge";
     public static final String CMD_TYPE_CREATE_QUEUE = "create_queue";
     public static final String CMD_TYPE_DELETE_QUEUE = "delete_queue";
-    public static final String CMD_TYPE_MESSAGE_PUBLISHED = "message_published";
     public static final String CMD_TYPE_SUBSCRIBE = "subscribe";
 
     private Socket socket;
@@ -79,10 +79,10 @@ public class Client implements Runnable, Closeable {
             try {
                 String readCommand = readCommand();
                 Response rs = XMLSerializer.deserialize(readCommand, Response.class);
-                if (rs.getStatus().equals(CMD_TYPE_MESSAGE_PUBLISHED)) {
+                if (rs.getStatus().equals(ClientHandler.STATUS_MSG_PBL)) {
                     Message msg = rs.getOptionalMessage();
                     messageObservers.get(msg.getQueueName()).forEach(a -> a.consumeMessage(msg));
-                            
+                    acknowledgeMessage(msg);
                 } else {
                     responsesToConsume.put(rs);
                 }
@@ -118,11 +118,12 @@ public class Client implements Runnable, Closeable {
         messageObservers.putIfAbsent(queueName, new HashSet<>());
         messageObservers.get(queueName).add(o);
         sendCommand(new Command(CMD_TYPE_SUBSCRIBE, queueName, ""));
-        
+
     }
 
     public void sendMessage(Message msg) {
         try {
+            msg.setQueueName(MessageBroker.DEFAULT_QUEUE_NAME);
             Command cmd = new Command(CMD_TYPE_SEND, MessageBroker.DEFAULT_QUEUE_NAME, msg.getBody());
             sendCommand(cmd);
         } catch (Exception ex) {
@@ -132,7 +133,18 @@ public class Client implements Runnable, Closeable {
 
     public void sendMessage(Message msg, String queueName) {
         try {
+            msg.setQueueName(queueName);
             Command cmd = new Command(CMD_TYPE_SEND, queueName, msg.getBody());
+            sendCommand(cmd);
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void sendRegexMessage(Message msg, String regex) {
+        try {
+            msg.setQueueName(regex);
+            Command cmd = new Command(CMD_TYPE_SEND_REGEX, regex, msg.getBody());
             sendCommand(cmd);
         } catch (Exception ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
@@ -189,6 +201,7 @@ public class Client implements Runnable, Closeable {
             sendCommand(new Command(CMD_TYPE_RECEIVE, queueName, ""));
             Response rs = responsesToConsume.take();
             Message message = rs.getOptionalMessage();
+            message.setQueueName(queueName);
             System.out.println("Message received " + message);
             acknowledgeMessage(message);
             return message;
@@ -200,7 +213,7 @@ public class Client implements Runnable, Closeable {
     }
 
     private void acknowledgeMessage(Message msg) {
-        sendCommand(new Command(CMD_TYPE_ACKNOWLEDGE, "default", String.valueOf(msg.getId())));
+        sendCommand(new Command(CMD_TYPE_ACKNOWLEDGE, msg.getQueueName(), String.valueOf(msg.getId())));
     }
 
     private String readCommand() throws IOException {
