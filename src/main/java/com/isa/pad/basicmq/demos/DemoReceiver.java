@@ -27,9 +27,11 @@ public class DemoReceiver {
     public static void main(String[] args) {
         Client client = new Client("localhost", 9000);
         client.openConnection();
-        client.subscribe(m -> System.out.println("Received " + m), "default");
-        client.subscribe(m -> System.out.println("Received " + m), "GOOGLE");
-        client.subscribe(m -> System.out.println("Received " + m), "GOOGLPLEX");
+        client.listAllQueues();
+        client.subscribeRegex(m -> System.out.println("Received " + m), "G.+");
+        //client.subscribe(m -> System.out.println("Received " + m), "default");
+        //client.subscribe(m -> System.out.println("Received " + m), "GOOGLE");
+        //client.subscribe(m -> System.out.println("Received " + m), "GOOGLPLEX");
         //Message msg = client.receiveMessage();
         //msg = client.receiveMessage("GOOGLE");
     }

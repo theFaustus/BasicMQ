@@ -17,7 +17,7 @@ import org.simpleframework.xml.Root;
 @Root
 public class Message {
 
-    @Attribute
+    @Attribute(required = false)
     private Long id;
     @Element
     private String body;

@@ -32,6 +32,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.simpleframework.xml.core.Persister;
 
 /**
@@ -47,6 +49,8 @@ public class Client implements Runnable, Closeable {
     public static final String CMD_TYPE_CREATE_QUEUE = "create_queue";
     public static final String CMD_TYPE_DELETE_QUEUE = "delete_queue";
     public static final String CMD_TYPE_SUBSCRIBE = "subscribe";
+    public static final String CMD_TYPE_SUBSCRIBE_REGEX = "subscribe_regex";
+    public static final String CMD_TYPE_LIST_QUEUES = "list_queues";
 
     private Socket socket;
     private String server;
@@ -121,6 +125,21 @@ public class Client implements Runnable, Closeable {
 
     }
 
+    public void subscribeRegex(MessageObserver o, String regex) {
+        Message listAllQueues = listAllQueues();
+        String[] queueNames = listAllQueues.getBody().split(",");
+        for (String queueName : queueNames) {
+            Pattern p = Pattern.compile(regex);
+            Matcher m = p.matcher(queueName);
+            if (m.find()) {
+                messageObservers.putIfAbsent(queueName, new HashSet<>());
+                messageObservers.get(queueName).add(o);
+                sendCommand(new Command(CMD_TYPE_SUBSCRIBE, queueName, ""));
+            }
+        }
+
+    }
+
     public void sendMessage(Message msg) {
         try {
             msg.setQueueName(MessageBroker.DEFAULT_QUEUE_NAME);
@@ -188,6 +207,20 @@ public class Client implements Runnable, Closeable {
             Message message = rs.getOptionalMessage();
             System.out.println("Message received " + message);
             acknowledgeMessage(message);
+            return message;
+
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        }
+    }
+
+    public Message listAllQueues() {
+        try {
+            sendCommand(new Command(CMD_TYPE_LIST_QUEUES, "", ""));
+            Response rs = responsesToConsume.take();
+            Message message = rs.getOptionalMessage();
+            System.out.println("Received " + message);
             return message;
 
         } catch (Exception ex) {

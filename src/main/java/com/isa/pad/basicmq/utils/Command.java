@@ -17,7 +17,7 @@ public class Command {
 
     @Element
     private String type;
-    @Element
+    @Element(required = false)
     private String queueName;
     @Element(required = false)
     private String body;

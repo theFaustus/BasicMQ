@@ -48,7 +48,7 @@ public class ClientHandler implements Runnable {
     public static final String STATUS_MSG_PBL = "MSG_PBL";
     public static final String STATUS_MSG_OK = "MSG_OK";
     public static final String STATUS_MSG_ERROR = "MSG_ERROR";
-    
+
     private static Map<String, Set<PrintWriter>> queueSubscribers = new ConcurrentHashMap<>();
 
     ClientHandler(Server server, Socket clientSocket) {
@@ -112,7 +112,15 @@ public class ClientHandler implements Runnable {
                                     publishMessage(message, queuesName);
                                 }
                             }
+                        } else if (cmd.getType().equals(Client.CMD_TYPE_LIST_QUEUES)) {
+                            List<String> listOfQueueNames = messageBroker.getAllQueues();
+                            StringWriter sw = XMLSerializer.serialize(new Response(new Message(listOfQueueNames.stream().collect(Collectors.joining(","))), STATUS_MSG_OK));
+                            output.println(sw.toString());
+                            output.println();
+                            output.flush();
                         }
+                        
+                        
                     }
                 } catch (RuntimeException e) {
                     StringWriter sw = XMLSerializer.serialize(new Response(null, STATUS_MSG_ERROR, e.getMessage()));
